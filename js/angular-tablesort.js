@@ -13,12 +13,14 @@ tableSortModule.directive('tsWrapper', ['$log', '$parse', function( $log, $parse
         controller: ['$scope', function($scope) {
             $scope.sortExpression = [];
             $scope.headings = [];
+            $scope.enableSorting = false;
 
             var parse_sortexpr = function( expr ) {
                 return [$parse( expr ), null, false];
             };
 
             this.setSortField = function( sortexpr, element ) {
+              $scope.enableSorting = true;
                 var i;
                 var expr = parse_sortexpr( sortexpr );
                 if( $scope.sortExpression.length === 1
@@ -123,6 +125,10 @@ tableSortModule.directive('tsWrapper', ['$log', '$parse', function( $log, $parse
                 }
                 return 0;
             };
+
+          $scope.setEnableSortingFlag = function (val) {
+            $scope.enableSorting = val;
+          };
         }]
     };
 }]);
@@ -135,8 +141,7 @@ tableSortModule.directive('tsCriteria', function() {
                 scope.$apply( function() {
                     if( event.shiftKey ) {
                         tsWrapperCtrl.addSortField(attrs.tsCriteria, element);
-                    }
-                    else {
+                    } else {
                         tsWrapperCtrl.setSortField(attrs.tsCriteria, element);
                     }
                 } );
@@ -167,36 +172,34 @@ tableSortModule.directive("tsRepeat", ['$compile', function($compile) {
             for (i = 0; i < repeatAttrs.length; i++) {
                  if (angular.isDefined(element.attr(repeatAttrs[i]))) {
                     ngRepeatDirective = repeatAttrs[i];
-                    tsRepeatDirective = ngRepeatDirective.replace(/^(data-)?ng/, '$1ts');
+                    tsRepeatDirective = ngRepeatDirective.replace(/^ng/, 'ts');
                     break;
                 }
             }
 
             var repeatExpr = element.attr(ngRepeatDirective);
             var trackBy = null;
-            var trackByMatch = repeatExpr.match(/\s+track\s+by\s+\S+?\.(\S+)/);
+            var trackByMatch = repeatExpr.match(/\s+track\s+by\s+\S+?(\S+)/);
             if( trackByMatch ) {
                 trackBy = trackByMatch[1];
                 tsWrapperCtrl.setTrackBy(trackBy);
             }
 
             if (repeatExpr.search(/tablesort/) != -1) {
-                repeatExpr = repeatExpr.replace(/tablesort/,"tablesortOrderBy:sortFun");
+                repeatExpr = repeatExpr.replace(/tablesort/,"tablesortOrderBy:sortFun:enableSorting:setEnableSortingFlag");
             } else {
                 repeatExpr = repeatExpr.replace(/^\s*([\s\S]+?)\s+in\s+([\s\S]+?)(\s+track\s+by\s+[\s\S]+?)?\s*$/,
                     "$1 in $2 | tablesortOrderBy:sortFun$3");
             }
 
-            if (angular.isUndefined(attrs.tsHideNoData)) {
-                var noDataRow = angular.element(element[0]).clone();
-                noDataRow.removeAttr(ngRepeatDirective);
-                noDataRow.removeAttr(tsRepeatDirective);
-                noDataRow.addClass("showIfLast");
-                noDataRow.children().remove();
-                noDataRow.append('<td colspan="' + element[0].childElementCount + '"></td>');
-                noDataRow = $compile(noDataRow)(scope);
-                element.parent().prepend(noDataRow);
-            }
+            var noDataRow = angular.element(element[0]).clone();
+            noDataRow.removeAttr(ngRepeatDirective);
+            noDataRow.removeAttr(tsRepeatDirective);
+            noDataRow.addClass("showIfLast");
+            noDataRow.children().remove();
+            noDataRow.append('<td colspan="' + element[0].childElementCount + '"></td>');
+            noDataRow = $compile(noDataRow)(scope);
+            element.parent().prepend(noDataRow);
 
             angular.element(element[0]).attr(ngRepeatDirective, repeatExpr);
             $compile(element, null, 1000000)(scope);
@@ -205,11 +208,11 @@ tableSortModule.directive("tsRepeat", ['$compile', function($compile) {
 }]);
 
 tableSortModule.filter( 'tablesortOrderBy', function(){
-    return function(array, sortfun ) {
+    return function(array, sortfun, enableSorting, setEnableSortingFlag) {
+        if (!enableSorting) return array;
+        setEnableSortingFlag(false);
         if(!array) return;
-        var arrayCopy = [];
-        for ( var i = 0; i < array.length; i++) { arrayCopy.push(array[i]); }
-        return arrayCopy.sort( sortfun );
+        return array.sort( sortfun );
     };
 } );
 
