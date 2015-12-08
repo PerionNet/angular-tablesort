@@ -48,6 +48,7 @@ tableSortModule.directive('tsWrapper', ['$log', '$parse', function( $log, $parse
             };
 
             this.addSortField = function( sortexpr, element ) {
+                $scope.enableSorting = true;
                 var i;
                 var toggle_order = false;
                 var expr = parse_sortexpr( sortexpr );
@@ -210,9 +211,13 @@ tableSortModule.directive("tsRepeat", ['$compile', function($compile) {
 tableSortModule.filter( 'tablesortOrderBy', function(){
     return function(array, sortfun, enableSorting, setEnableSortingFlag) {
         if (!enableSorting) return array;
-        setEnableSortingFlag(false);
         if(!array) return;
+        setEnableSortingFlag(false);
+
+       // array = _.sortBy(array, 'revenue');
+      //array = array.sort( sortfun );
         return array.sort( sortfun );
+
     };
 } );
 
